@@ -3,6 +3,7 @@
   "outputDirectory": "dist/client",
   "installCommand": "bun install",
   "framework": null,
+  "regions": ["hnd1"],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/ssr" }
   ],
@@ -17,6 +18,7 @@
   "functions": {
     "api/ssr.js": {
       "maxDuration": 30,
+      "memory": 256,
       "includeFiles": "dist/server/**"
     }
   }

@@ -1,9 +1,8 @@
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
+// Static import so Vercel's nft can trace the dependency graph at build time
+import server from '../dist/server/server.js';
 
-// Resolve the built server from dist/server/server.js
-const serverPath = join(process.cwd(), 'dist', 'server', 'server.js');
-const server = await import(serverPath).then(m => m.default?.default || m.default);
+// Resolve the correct export shape (may be nested default)
+const app = server?.default || server;
 
 export default async function handler(req, res) {
   try {
@@ -24,7 +23,7 @@ export default async function handler(req, res) {
       duplex: hasBody ? 'half' : undefined,
     });
 
-    const webResponse = await server.fetch(webRequest);
+    const webResponse = await app.fetch(webRequest);
 
     res.statusCode = webResponse.status;
     for (const [key, value] of webResponse.headers.entries()) {
