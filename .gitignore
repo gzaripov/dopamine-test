@@ -7,3 +7,4 @@ dist
 .vite
 app/routeTree.gen.ts
 prisma/migrations/**/migration_lock.toml
+.vercel

@@ -13,10 +13,20 @@ mkdir -p .vercel/output/functions/ssr.func
 # Static client assets
 cp -r dist/client/* .vercel/output/static/
 
-# Server function — copy server bundle + node_modules
-cp -r dist/server/* .vercel/output/functions/ssr.func/
-cp -r node_modules .vercel/output/functions/ssr.func/node_modules
-cp package.json .vercel/output/functions/ssr.func/
+# Bundle server into a single self-contained file
+bun build dist/server/server.js \
+  --outdir .vercel/output/functions/ssr.func \
+  --outfile bundled-server.js \
+  --target node \
+  --format esm \
+  --external @prisma/client \
+  --external prisma
+
+# Copy only the Prisma client (not all node_modules)
+mkdir -p .vercel/output/functions/ssr.func/node_modules/.prisma
+mkdir -p .vercel/output/functions/ssr.func/node_modules/@prisma
+cp -r node_modules/.prisma/client .vercel/output/functions/ssr.func/node_modules/.prisma/client
+cp -r node_modules/@prisma/client .vercel/output/functions/ssr.func/node_modules/@prisma/client
 
 # Vercel function config
 cat > .vercel/output/functions/ssr.func/.vc-config.json << 'EOF'
@@ -28,13 +38,12 @@ cat > .vercel/output/functions/ssr.func/.vc-config.json << 'EOF'
 }
 EOF
 
-# Thin handler wrapper that converts Vercel's Node handler to the fetch API
+# Handler wrapper
 cat > .vercel/output/functions/ssr.func/handler.js << 'HANDLER'
-import server from './server.js';
+import server from './bundled-server.js';
 
 export default async function handler(req, res) {
   try {
-    // Build a Web Request from Node's IncomingMessage
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
     const url = new URL(req.url, `${protocol}://${host}`);
@@ -54,7 +63,6 @@ export default async function handler(req, res) {
 
     const webResponse = await server.fetch(webRequest);
 
-    // Write response
     res.statusCode = webResponse.status;
     webResponse.headers.forEach((value, key) => {
       res.setHeader(key, value);
@@ -62,15 +70,12 @@ export default async function handler(req, res) {
 
     if (webResponse.body) {
       const reader = webResponse.body.getReader();
-      const pump = async () => {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
-        }
-        res.end();
-      };
-      await pump();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
     } else {
       res.end(await webResponse.text());
     }
@@ -81,6 +86,9 @@ export default async function handler(req, res) {
   }
 }
 HANDLER
+
+# Package.json for ESM
+echo '{"type":"module"}' > .vercel/output/functions/ssr.func/package.json
 
 # Routing config
 cat > .vercel/output/config.json << 'EOF'
@@ -95,3 +103,4 @@ cat > .vercel/output/config.json << 'EOF'
 EOF
 
 echo "Vercel build output ready"
+du -sh .vercel/output/functions/ssr.func/ | sed 's/^/Function size: /'
