@@ -6,7 +6,6 @@
     "dev": "vite",
     "build": "vite build",
     "start": "bun run dist/server/server.js",
-    "vercel-build": "bash scripts/vercel-build.sh",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
