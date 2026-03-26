@@ -29,11 +29,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" style={{ background: '#110e1a', colorScheme: 'dark' }}>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body style={{ background: '#110e1a', color: '#f0edf5' }}>
         <SiteHeader />
         <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
         <Toaster position="top-right" richColors />
