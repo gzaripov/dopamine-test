@@ -4,6 +4,9 @@ import server from '../dist/server/server.js';
 // Resolve the correct export shape (may be nested default)
 const app = server?.default || server;
 
+// Pages that don't hit the database can be cached at the edge
+const CACHEABLE_PATHS = ['/', '/test'];
+
 export default async function handler(req, res) {
   try {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -28,6 +31,11 @@ export default async function handler(req, res) {
     res.statusCode = webResponse.status;
     for (const [key, value] of webResponse.headers.entries()) {
       res.setHeader(key, value);
+    }
+
+    // Cache static pages at the Vercel edge
+    if (CACHEABLE_PATHS.includes(url.pathname) && req.method === 'GET') {
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=600');
     }
 
     if (webResponse.body) {
