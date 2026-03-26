@@ -11,7 +11,9 @@ export default async function handler(req, res) {
   try {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
-    const url = new URL(req.url, `${protocol}://${host}`);
+    // Vercel rewrites set x-invoke-path to the original URL
+    const originalPath = req.headers['x-invoke-path'] || req.url;
+    const url = new URL(originalPath, `${protocol}://${host}`);
 
     const headers = new Headers();
     for (const [key, val] of Object.entries(req.headers)) {
