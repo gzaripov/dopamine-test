@@ -6,8 +6,6 @@ FROM base AS deps
 COPY package.json bun.lock* ./
 COPY prisma ./prisma/
 RUN bun install --frozen-lockfile
-
-# Generate Prisma client
 RUN bunx prisma generate
 
 # Build
@@ -22,11 +20,10 @@ FROM base AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
-COPY --from=build /app/.output ./.output
+COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package.json ./
 
-# Run migrations and start
 EXPOSE 3000
-CMD ["sh", "-c", "bunx prisma migrate deploy && bun run .output/server/index.mjs"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && bun run dist/server/server.js"]
