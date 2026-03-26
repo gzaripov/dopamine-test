@@ -15,13 +15,12 @@ cp -r dist/client/* .vercel/output/static/
 
 # Bundle server into a single self-contained file
 bun build dist/server/server.js \
-  --outdir .vercel/output/functions/ssr.func \
-  --outfile bundled-server.js \
   --target node \
   --format esm \
   --external @prisma/client \
   --external .prisma/client \
-  --external prisma
+  --external prisma \
+  --outfile .vercel/output/functions/ssr.func/bundled-server.js
 
 # Copy only the Prisma client (not all node_modules)
 mkdir -p .vercel/output/functions/ssr.func/node_modules/.prisma
