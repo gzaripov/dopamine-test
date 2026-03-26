@@ -45,7 +45,7 @@ export const useTestStore = create<TestStore>()(
     {
       name: 'dopamine-test-progress',
       storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? sessionStorage : {
+        typeof window !== 'undefined' ? localStorage : {
           getItem: () => null,
           setItem: () => {},
           removeItem: () => {},
