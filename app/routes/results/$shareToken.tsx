@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useEffect } from 'react';
 
 import { CategoryBreakdown } from '@/components/results/category-breakdown';
 import { Recommendations } from '@/components/results/recommendations';
@@ -8,9 +7,8 @@ import { ShareButton } from '@/components/results/share-button';
 import { TierBadge } from '@/components/results/tier-badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useSession } from '@/lib/auth-client';
 import type { TierLabel } from '@/lib/scoring';
-import { claimAssessmentFn, getAssessmentFn } from '@/server/assessment';
+import { getAssessmentFn } from '@/server/assessment';
 
 export const Route = createFileRoute('/results/$shareToken')({
   loader: async ({ params }) => {
@@ -26,15 +24,6 @@ export const Route = createFileRoute('/results/$shareToken')({
 
 function ResultsPage() {
   const assessment = Route.useLoaderData();
-  const { data: session } = useSession();
-  const { shareToken } = Route.useParams();
-
-  // Claim this assessment if user just signed in
-  useEffect(() => {
-    if (session?.user && !assessment.userId) {
-      claimAssessmentFn({ data: { shareToken } }).catch(() => {});
-    }
-  }, [session?.user, assessment.userId, shareToken]);
 
   const categoryScores = assessment.categoryScores as Record<string, number>;
 
@@ -72,25 +61,7 @@ function ResultsPage() {
         <Button variant="outline" asChild>
           <Link to="/test">Retake test</Link>
         </Button>
-        {!session?.user && (
-          <Button asChild>
-            <Link to="/auth/signup" search={{ returnTo: `/results/${shareToken}` }}>
-              Save results
-            </Link>
-          </Button>
-        )}
-        {session?.user && (
-          <Button variant="secondary" asChild>
-            <Link to="/history">View history</Link>
-          </Button>
-        )}
       </div>
-
-      {!session?.user && (
-        <p className="text-center text-xs text-muted-foreground">
-          Sign up to save your results and track your dopamine health over time.
-        </p>
-      )}
     </div>
   );
 }
