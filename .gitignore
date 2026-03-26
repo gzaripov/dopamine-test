@@ -1,0 +1,9 @@
+node_modules
+dist
+.output
+.env
+*.local
+.vinxi
+.vite
+app/routeTree.gen.ts
+prisma/migrations/**/migration_lock.toml
