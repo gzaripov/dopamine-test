@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { CATEGORIES } from '@/lib/questions';
 
@@ -13,29 +14,47 @@ type TestStore = {
   isComplete: () => boolean;
 };
 
-export const useTestStore = create<TestStore>((set, get) => ({
-  currentStep: 0,
-  answers: {},
+export const useTestStore = create<TestStore>()(
+  persist(
+    (set, get) => ({
+      currentStep: 0,
+      answers: {},
 
-  setAnswer: (questionId, value) =>
-    set((s) => ({ answers: { ...s.answers, [questionId]: value } })),
+      setAnswer: (questionId, value) =>
+        set((s) => ({ answers: { ...s.answers, [questionId]: value } })),
 
-  nextStep: () =>
-    set((s) => ({ currentStep: Math.min(s.currentStep + 1, CATEGORIES.length - 1) })),
+      nextStep: () =>
+        set((s) => ({ currentStep: Math.min(s.currentStep + 1, CATEGORIES.length - 1) })),
 
-  prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 0) })),
+      prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 0) })),
 
-  reset: () => set({ currentStep: 0, answers: {} }),
+      reset: () => set({ currentStep: 0, answers: {} }),
 
-  isStepComplete: (step: number) => {
-    const { answers } = get();
-    const category = CATEGORIES[step];
-    if (!category) return false;
-    return category.questions.every((q) => answers[q.id] != null);
-  },
+      isStepComplete: (step: number) => {
+        const { answers } = get();
+        const category = CATEGORIES[step];
+        if (!category) return false;
+        return category.questions.every((q) => answers[q.id] != null);
+      },
 
-  isComplete: () => {
-    const { answers } = get();
-    return CATEGORIES.every((cat) => cat.questions.every((q) => answers[q.id] != null));
-  },
-}));
+      isComplete: () => {
+        const { answers } = get();
+        return CATEGORIES.every((cat) => cat.questions.every((q) => answers[q.id] != null));
+      },
+    }),
+    {
+      name: 'dopamine-test-progress',
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? sessionStorage : {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        },
+      ),
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        answers: state.answers,
+      }),
+    },
+  ),
+);
