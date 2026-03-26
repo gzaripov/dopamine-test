@@ -29,12 +29,17 @@ export default async function handler(req, res) {
     const webResponse = await app.fetch(webRequest);
 
     res.statusCode = webResponse.status;
+
+    // Cache static pages at the Vercel edge — set BEFORE other headers
+    const isCacheable = CACHEABLE_PATHS.includes(url.pathname) && req.method === 'GET';
+
     for (const [key, value] of webResponse.headers.entries()) {
+      // Skip cache-control from SSR for cacheable pages
+      if (isCacheable && key.toLowerCase() === 'cache-control') continue;
       res.setHeader(key, value);
     }
 
-    // Cache static pages at the Vercel edge
-    if (CACHEABLE_PATHS.includes(url.pathname) && req.method === 'GET') {
+    if (isCacheable) {
       res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=600');
     }
 
