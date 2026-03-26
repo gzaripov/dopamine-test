@@ -20,6 +20,7 @@ bun build dist/server/server.js \
   --target node \
   --format esm \
   --external @prisma/client \
+  --external .prisma/client \
   --external prisma
 
 # Copy only the Prisma client (not all node_modules)
@@ -28,19 +29,24 @@ mkdir -p .vercel/output/functions/ssr.func/node_modules/@prisma
 cp -r node_modules/.prisma/client .vercel/output/functions/ssr.func/node_modules/.prisma/client
 cp -r node_modules/@prisma/client .vercel/output/functions/ssr.func/node_modules/@prisma/client
 
+# Show engine files for debugging
+echo "Prisma engine files:"
+ls -la .vercel/output/functions/ssr.func/node_modules/.prisma/client/ | grep -E "engine|\.node|\.so"
+
 # Vercel function config
 cat > .vercel/output/functions/ssr.func/.vc-config.json << 'EOF'
 {
   "runtime": "nodejs22.x",
-  "handler": "handler.js",
+  "handler": "handler.mjs",
   "launcherType": "Nodejs",
   "maxDuration": 30
 }
 EOF
 
-# Handler wrapper
-cat > .vercel/output/functions/ssr.func/handler.js << 'HANDLER'
-import server from './bundled-server.js';
+# Handler wrapper — use .mjs extension for guaranteed ESM
+cat > .vercel/output/functions/ssr.func/handler.mjs << 'HANDLER'
+const mod = await import('./bundled-server.js');
+const server = mod.default?.default || mod.default;
 
 export default async function handler(req, res) {
   try {
@@ -64,9 +70,9 @@ export default async function handler(req, res) {
     const webResponse = await server.fetch(webRequest);
 
     res.statusCode = webResponse.status;
-    webResponse.headers.forEach((value, key) => {
+    for (const [key, value] of webResponse.headers.entries()) {
       res.setHeader(key, value);
-    });
+    }
 
     if (webResponse.body) {
       const reader = webResponse.body.getReader();
@@ -80,15 +86,12 @@ export default async function handler(req, res) {
       res.end(await webResponse.text());
     }
   } catch (err) {
-    console.error('SSR Error:', err);
+    console.error('SSR Error:', err?.message, err?.stack);
     res.statusCode = 500;
-    res.end('Internal Server Error');
+    res.end('Internal Server Error: ' + (err?.message || 'Unknown'));
   }
 }
 HANDLER
-
-# Package.json for ESM
-echo '{"type":"module"}' > .vercel/output/functions/ssr.func/package.json
 
 # Routing config
 cat > .vercel/output/config.json << 'EOF'
